@@ -1,2 +1,2784 @@
-# THI-N-H-7878
-GAME
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Bảo Vệ Trái Đất - 30 Cấp Độ & Phòng Thủ Quỹ Đạo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --cyan: #38bdf8;
+      --cyan-bright: #7dd3fc;
+      --blue: #2563eb;
+      --purple: #a855f7;
+      --gold: #fbbf24;
+      --danger: #fb7185;
+      --glass-bg: rgba(8, 15, 38, 0.85);
+      --glass-border: rgba(56, 189, 248, 0.42);
+    }
+
+    html, body {
+      background: #02040d;
+      color: #f8fafc;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+    }
+
+    canvas#gameCanvas {
+      position: fixed;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      touch-action: none;
+    }
+
+    /* HUD phía trên */
+    #hud {
+      position: fixed;
+      top: max(10px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      right: max(10px, env(safe-area-inset-right));
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .hud-left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      max-width: 64%;
+    }
+
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      padding: 6px 9px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    .stat-pill .val {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--cyan-bright);
+    }
+
+    .stat-pill.level .val { color: #c084fc; }
+    .stat-pill.gold .val { color: var(--gold); }
+    .stat-pill.hp .val { color: #4ade80; }
+    .stat-pill.hp.low .val { color: var(--danger); }
+
+    .hp-bar-wrap {
+      width: 46px;
+      height: 7px;
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    #hpBarFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #22c55e, #38bdf8);
+      transition: width 0.2s ease, background 0.2s ease;
+    }
+
+    .hud-right {
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .tool-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, rgba(15, 29, 68, 0.95), rgba(11, 20, 48, 0.98));
+      backdrop-filter: blur(12px);
+      color: #f1f5f9;
+      border: 1px solid rgba(56, 189, 248, 0.48);
+      padding: 8px 11px;
+      border-radius: 11px;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+      transition: transform 0.14s ease, border-color 0.2s ease;
+    }
+
+    .tool-btn:active { transform: scale(0.95); }
+
+    .tool-btn.emp-btn {
+      background: linear-gradient(135deg, rgba(88, 28, 135, 0.92), rgba(37, 99, 235, 0.92));
+      border-color: rgba(192, 132, 252, 0.65);
+    }
+
+    .tool-btn.emp-btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .badge {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #bae6fd;
+      padding: 1px 5px;
+      border-radius: 6px;
+      font-size: 10.5px;
+    }
+
+    /* Thanh tiến độ cấp độ */
+    #levelProgressWrap {
+      position: fixed;
+      top: calc(max(10px, env(safe-area-inset-top)) + 70px);
+      left: max(10px, env(safe-area-inset-left));
+      width: min(240px, 52vw);
+      background: rgba(9, 17, 42, 0.78);
+      border: 1px solid rgba(192, 132, 252, 0.38);
+      border-radius: 999px;
+      height: 7px;
+      overflow: hidden;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    #levelProgressFill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #c084fc);
+      transition: width 0.2s ease;
+    }
+
+    /* Thanh máu Boss Hố Đen */
+    #bossHud {
+      position: fixed;
+      top: calc(max(10px, env(safe-area-inset-top)) + 86px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(560px, 90vw);
+      background: rgba(10, 14, 34, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(192, 132, 252, 0.6);
+      border-radius: 14px;
+      padding: 9px 14px;
+      z-index: 16;
+      display: none;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    }
+
+    #bossHud.active { display: block; }
+
+    .boss-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #f3e8ff;
+    }
+
+    .boss-bar-bg {
+      width: 100%;
+      height: 11px;
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    #bossBarFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #a855f7, #38bdf8);
+      transition: width 0.08s linear;
+    }
+
+    /* Thông báo nổi */
+    #toast {
+      position: fixed;
+      top: calc(max(10px, env(safe-area-inset-top)) + 136px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(12, 24, 58, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.65);
+      color: #e0f2fe;
+      padding: 7px 15px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 40;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      max-width: 92vw;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Màn hình Bắt đầu / Chơi lại cấp hiện tại / Chiến thắng */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 50% 38%, rgba(14, 34, 82, 0.55), rgba(2, 5, 16, 0.9));
+      backdrop-filter: blur(6px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      z-index: 25;
+      overflow-y: auto;
+      touch-action: pan-y;
+      transition: opacity 0.35s ease;
+    }
+
+    #overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .welcome-card {
+      position: relative;
+      width: 100%;
+      max-width: 620px;
+      background: linear-gradient(165deg, rgba(13, 24, 58, 0.92), rgba(6, 11, 28, 0.96));
+      border: 1px solid rgba(56, 189, 248, 0.48);
+      border-radius: 24px;
+      padding: 24px 20px 22px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), inset 0 0 32px rgba(56, 189, 248, 0.14);
+    }
+
+    .mission-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #7dd3fc;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .welcome-card h1 {
+      font-size: clamp(24px, 5.2vw, 40px);
+      line-height: 1.15;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #e0f2fe, #38bdf8, #c084fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .welcome-card p {
+      color: #cbd5e1;
+      font-size: 13.5px;
+      line-height: 1.55;
+      max-width: 520px;
+      margin: 0 auto 16px;
+    }
+
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .guide-item {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 13px;
+      padding: 9px 7px;
+      font-size: 11.5px;
+      color: #cbd5e1;
+    }
+
+    .guide-item strong {
+      display: block;
+      color: #7dd3fc;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+
+    #holdStartBtn {
+      --charge: 0;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+      max-width: 330px;
+      padding: 16px 22px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: #fff;
+      border-radius: 18px;
+      cursor: pointer;
+      touch-action: none;
+      background: linear-gradient(135deg, #1d4ed8, #0284c7);
+      border: 1.5px solid rgba(125, 211, 252, 0.65);
+      box-shadow:
+        0 0 calc(18px + var(--charge) * 44px) rgba(56, 189, 248, calc(0.38 + var(--charge) * 0.62)),
+        0 0 calc(var(--charge) * 70px) rgba(192, 132, 252, calc(0.6));
+      filter: brightness(calc(1 + var(--charge) * 0.72));
+      transform: scale(calc(1 + var(--charge) * 0.05));
+      transition: box-shadow 0.06s linear, filter 0.06s linear, transform 0.06s linear;
+    }
+
+    #holdStartBtn .charge-fill {
+      position: absolute;
+      inset: 0;
+      width: calc(var(--charge) * 100%);
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.45), rgba(255, 255, 255, 0.85));
+      pointer-events: none;
+    }
+
+    #holdStartBtn .btn-label {
+      position: relative;
+      z-index: 2;
+      text-shadow: 0 0 calc(var(--charge) * 16px) #ffffff;
+    }
+
+    .hold-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #93c5fd;
+    }
+
+    #resetCampaignBtn {
+      margin-top: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #94a3b8;
+      padding: 7px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      touch-action: manipulation;
+    }
+
+    #screenFlash {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #ffffff 0%, #bae6fd 45%, rgba(56, 189, 248, 0.4) 100%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 35;
+    }
+
+    #shopModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 5, 16, 0.88);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 30;
+      padding: 12px;
+      touch-action: pan-y;
+    }
+
+    #shopModal.open { display: flex; }
+
+    .shop-panel {
+      width: 100%;
+      max-width: 820px;
+      max-height: 88dvh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      background: linear-gradient(165deg, #0d193b, #070d21);
+      border: 1px solid rgba(56, 189, 248, 0.52);
+      border-radius: 22px;
+      padding: 18px 16px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8), inset 0 0 28px rgba(56, 189, 248, 0.12);
+    }
+
+    .shop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .shop-header h2 {
+      font-size: 17px;
+      color: #e0f2fe;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .shop-wallet {
+      background: rgba(251, 191, 36, 0.14);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      color: #fde047;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .shop-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      border-radius: 15px;
+      padding: 12px;
+    }
+
+    .card-top {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .card-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      flex-shrink: 0;
+    }
+
+    .card-info h3 {
+      font-size: 13.5px;
+      color: #f8fafc;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .lvl-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(168, 85, 247, 0.22);
+      border: 1px solid rgba(192, 132, 252, 0.45);
+      color: #e9d5ff;
+      white-space: nowrap;
+    }
+
+    .card-info p {
+      font-size: 11.5px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .buy-btn {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 11px;
+      border: none;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+      color: #091024;
+      background: linear-gradient(135deg, #fde047, #f59e0b);
+    }
+
+    .buy-btn:disabled {
+      background: rgba(51, 65, 85, 0.65);
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 600px) {
+      .hud-left { max-width: 62%; gap: 4px; }
+      .stat-pill { padding: 5px 7px; font-size: 11px; border-radius: 10px; }
+      .stat-pill .val { font-size: 12px; }
+      .hp-bar-wrap { width: 34px; height: 6px; }
+      .tool-btn { padding: 7px 8px; font-size: 11px; border-radius: 10px; }
+      .badge { display: none; }
+      .guide-grid { grid-template-columns: 1fr; gap: 6px; }
+      .shop-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="screenFlash"></div>
+  <div id="toast"></div>
+
+  <div id="hud">
+    <div class="hud-left">
+      <div class="stat-pill level">
+        <span>Cấp</span>
+        <span class="val" id="levelEl">1/30</span>
+      </div>
+      <div class="stat-pill">
+        <span>Điểm</span>
+        <span class="val" id="scoreEl">0</span>
+      </div>
+      <div class="stat-pill gold">
+        <span>Xu</span>
+        <span class="val" id="coinsEl">0</span>
+      </div>
+      <div class="stat-pill hp" id="hpPill">
+        <span>HP</span>
+        <div class="hp-bar-wrap"><div id="hpBarFill"></div></div>
+        <span class="val" id="hpEl">100%</span>
+      </div>
+      <div class="stat-pill">
+        <span>Khiên</span>
+        <span class="val" id="shieldEl">0</span>
+      </div>
+      <div class="stat-pill" id="comboPill" style="display:none;">
+        <span>Combo</span>
+        <span class="val" id="comboEl">x1</span>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <button class="tool-btn emp-btn" id="useEmpBtn" disabled title="Phím Space / Chạm">
+        ⚡ EMP (<span id="empCountEl">0</span>) <span class="badge">Space</span>
+      </button>
+      <button class="tool-btn" id="openShopBtn">
+        🛸 Shop <span class="badge">B</span>
+      </button>
+      <button class="tool-btn" id="soundBtn" title="Bật/Tắt âm thanh">🔊</button>
+    </div>
+  </div>
+
+  <div id="levelProgressWrap" title="Tiến độ lên cấp tiếp theo">
+    <div id="levelProgressFill"></div>
+  </div>
+
+  <div id="bossHud">
+    <div class="boss-header">
+      <span id="bossNameEl">🕳️ BOSS HỐ ĐEN CẤP 10</span>
+      <span id="bossHpTextEl">20.000 / 20.000 HP</span>
+    </div>
+    <div class="boss-bar-bg">
+      <div id="bossBarFill"></div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div class="welcome-card">
+      <div class="mission-tag" id="missionTag">CHIẾN DỊCH 30 CẤP ĐỘ • ĐỘ KHÓ TĂNG DẦN</div>
+      <h1 id="overlayTitle">BẢO VỆ TRÁI ĐẤT</h1>
+      <p id="overlayDesc">
+        Bắt đầu nhẹ nhàng từ Cấp 1 dễ làm quen và tăng dần độ khó qua 30 cấp độ. Nâng cấp tháp pháo hai bên màn hình,
+        vệ tinh quỹ đạo và tiêu diệt Boss Hố Đen ở cấp 10, 20, 30!
+      </p>
+
+      <div class="guide-grid" id="guideGrid">
+        <div class="guide-item">
+          <strong>🗼 Pháo hai bên & Vệ tinh</strong>
+          Mua trong Shop tự động bắn địch
+        </div>
+        <div class="guide-item">
+          <strong>🕳️ Boss Hố Đen</strong>
+          Cấp 10 (20k) • Cấp 20 (40k) • Cấp 30 (60k)
+        </div>
+        <div class="guide-item">
+          <strong>💾 Lưu tiến trình cấp</strong>
+          Thua ở cấp nào sẽ chơi lại ngay cấp đó
+        </div>
+      </div>
+
+      <button id="holdStartBtn" type="button">
+        <span class="charge-fill"></span>
+        <span class="btn-label" id="holdBtnLabel">GIỮ ĐỂ BẮT ĐẦU</span>
+      </button>
+      <div class="hold-hint" id="holdHint">Chạm giữ nút cho đến khi sáng bừng để khai hỏa</div>
+      <button id="resetCampaignBtn" type="button">↺ Chơi lại từ Cấp 1</button>
+    </div>
+  </div>
+
+  <div id="shopModal">
+    <div class="shop-panel">
+      <div class="shop-header">
+        <h2>🛸 Kho Vũ Khí & Phòng Thủ Quỹ Đạo</h2>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="shop-wallet">Xu: <span id="shopCoinsEl">0</span></div>
+          <button class="tool-btn" id="closeShopBtn">Đóng</button>
+        </div>
+      </div>
+
+      <div class="shop-grid">
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">🗼</div>
+            <div class="card-info">
+              <h3>Tháp pháo 2 bên màn hình <span class="lvl-tag" id="lvlSideTurret">Chưa có</span></h3>
+              <p>Đặt 2 khẩu pháo hạng nặng ở 2 bên màn hình, tự động xoay nòng ngắm bắn thiên thạch & Boss.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buySideTurretBtn">Mua 2 tháp pháo — 50 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">🛰️</div>
+            <div class="card-info">
+              <h3>Vệ tinh chiến đấu <span class="lvl-tag" id="lvlSatellite">0 / 3</span></h3>
+              <p>Phóng vệ tinh bay tuần tra quanh Trái Đất, bắn laser hỗ trợ và chặn thiên thạch.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buySatelliteBtn">Phóng 1 vệ tinh — 65 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">📏</div>
+            <div class="card-info">
+              <h3>Mở rộng lá chắn <span class="lvl-tag" id="lvlPaddle">Cấp 1</span></h3>
+              <p>Tăng chiều dài thanh chắn năng lượng giúp hứng thiên thạch và đạn địch dễ dàng hơn.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buyPaddleBtn">Nâng cấp — 30 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">🌐</div>
+            <div class="card-info">
+              <h3>Vòm khiên khí quyển <span class="lvl-tag" id="lvlShield">0 lớp</span></h3>
+              <p>Tạo lớp khiên bao bọc Trái Đất, tự động triệt tiêu thiên thạch & địch lọt qua.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buyShieldBtn">Mua 1 lớp — 45 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">🧲</div>
+            <div class="card-info">
+              <h3>Lõi từ trường hút <span class="lvl-tag" id="lvlMagnet">Cấp 0</span></h3>
+              <p>Tạo lực hút kéo thiên thạch ở gần về phía thanh chắn của bạn.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buyMagnetBtn">Nâng cấp — 55 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">🪙</div>
+            <div class="card-info">
+              <h3>Máy khai thác Xu <span class="lvl-tag" id="lvlGreed">Cấp 1</span></h3>
+              <p>Tăng thêm lượng Xu nhận được mỗi khi hứng thiên thạch hoặc hạ gục UFO.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buyGreedBtn">Nâng cấp — 50 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">💚</div>
+            <div class="card-info">
+              <h3>Phục hồi sinh quyển <span class="lvl-tag" id="lvlHeal">+40 HP</span></h3>
+              <p>Sửa chữa bề mặt Trái Đất, khôi phục độ bền khí quyển lên tối đa 100%.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buyHealBtn">Sửa chữa — 35 Xu</button>
+        </div>
+
+        <div class="shop-card">
+          <div class="card-top">
+            <div class="card-icon">⚡</div>
+            <div class="card-info">
+              <h3>Bom xung kích EMP <span class="lvl-tag" id="lvlEmp">Đang có: 0</span></h3>
+              <p>Nhấn Space / Chạm nút EMP để phóng sóng xung kích quét sạch địch & đánh Boss.</p>
+            </div>
+          </div>
+          <button class="buy-btn" id="buyEmpBtn">Mua 1 quả — 65 Xu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const screenFlash = document.getElementById("screenFlash");
+    const toastEl = document.getElementById("toast");
+
+    const levelEl = document.getElementById("levelEl");
+    const levelProgressFill = document.getElementById("levelProgressFill");
+    const scoreEl = document.getElementById("scoreEl");
+    const coinsEl = document.getElementById("coinsEl");
+    const shopCoinsEl = document.getElementById("shopCoinsEl");
+    const hpEl = document.getElementById("hpEl");
+    const hpPill = document.getElementById("hpPill");
+    const hpBarFill = document.getElementById("hpBarFill");
+    const shieldEl = document.getElementById("shieldEl");
+    const comboEl = document.getElementById("comboEl");
+    const comboPill = document.getElementById("comboPill");
+    const empCountEl = document.getElementById("empCountEl");
+    const useEmpBtn = document.getElementById("useEmpBtn");
+
+    const bossHud = document.getElementById("bossHud");
+    const bossNameEl = document.getElementById("bossNameEl");
+    const bossHpTextEl = document.getElementById("bossHpTextEl");
+    const bossBarFill = document.getElementById("bossBarFill");
+
+    const overlay = document.getElementById("overlay");
+    const missionTag = document.getElementById("missionTag");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const overlayDesc = document.getElementById("overlayDesc");
+    const holdStartBtn = document.getElementById("holdStartBtn");
+    const holdBtnLabel = document.getElementById("holdBtnLabel");
+    const holdHint = document.getElementById("holdHint");
+    const resetCampaignBtn = document.getElementById("resetCampaignBtn");
+
+    const shopModal = document.getElementById("shopModal");
+    const openShopBtn = document.getElementById("openShopBtn");
+    const closeShopBtn = document.getElementById("closeShopBtn");
+    const soundBtn = document.getElementById("soundBtn");
+
+    const buySideTurretBtn = document.getElementById("buySideTurretBtn");
+    const buySatelliteBtn = document.getElementById("buySatelliteBtn");
+    const buyPaddleBtn = document.getElementById("buyPaddleBtn");
+    const buyShieldBtn = document.getElementById("buyShieldBtn");
+    const buyMagnetBtn = document.getElementById("buyMagnetBtn");
+    const buyGreedBtn = document.getElementById("buyGreedBtn");
+    const buyHealBtn = document.getElementById("buyHealBtn");
+    const buyEmpBtn = document.getElementById("buyEmpBtn");
+
+    const MAX_LEVEL = 30;
+    const SAVE_KEY = "earth_defender_save_v6";
+
+    const BOSS_CONFIGS = {
+      10: {
+        name: "🕳️ HỐ ĐEN HƯ VÔ (CẤP 10)",
+        maxHp: 20000,
+        coreColor: "#090414",
+        ringInner: "#c084fc",
+        ringMid: "#38bdf8",
+        ringOuter: "rgba(168, 85, 247, 0.3)",
+        gradCss: "linear-gradient(90deg, #a855f7, #38bdf8)"
+      },
+      20: {
+        name: "🕳️ HỐ ĐEN HỎA NGỤC (CẤP 20)",
+        maxHp: 40000,
+        coreColor: "#140406",
+        ringInner: "#fb7185",
+        ringMid: "#f97316",
+        ringOuter: "rgba(244, 63, 94, 0.32)",
+        gradCss: "linear-gradient(90deg, #ef4444, #f97316)"
+      },
+      30: {
+        name: "🕳️ HỐ ĐEN THƯỢNG CỔ (CẤP 30)",
+        maxHp: 60000,
+        coreColor: "#031210",
+        ringInner: "#34d399",
+        ringMid: "#fbbf24",
+        ringOuter: "rgba(16, 185, 129, 0.34)",
+        gradCss: "linear-gradient(90deg, #10b981, #fbbf24)"
+      }
+    };
+
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
+
+    function getBasePaddleWidth() {
+      return viewW < 520 ? 120 : 152;
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
+      canvas.width = Math.floor(viewW * dpr);
+      canvas.height = Math.floor(viewH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      if (typeof state !== "undefined") {
+        state.paddleX = Math.max(0, Math.min(viewW - state.paddleW, state.paddleX));
+      }
+    }
+    window.addEventListener("resize", resize);
+
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function playTone(freq, type = "sine", duration = 0.12, vol = 0.08, endFreq = null) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          audioCtx = new AudioContextClass();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume().catch(() => {});
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (endFreq) {
+          osc.frequency.exponentialRampToValueAtTime(endFreq, audioCtx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (err) {}
+    }
+
+    soundBtn.addEventListener("click", () => {
+      soundEnabled = !soundEnabled;
+      soundBtn.textContent = soundEnabled ? "🔊" : "🔇";
+      showToast(soundEnabled ? "Đã bật âm thanh" : "Đã tắt âm thanh");
+    });
+
+    let toastTimer = null;
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2000);
+    }
+
+    const nebulae = [
+      { xRatio: 0.20, yRatio: 0.24, rRatio: 0.34, color: "rgba(79, 70, 229, 0.20)" },
+      { xRatio: 0.80, yRatio: 0.25, rRatio: 0.36, color: "rgba(14, 165, 233, 0.17)" },
+      { xRatio: 0.50, yRatio: 0.48, rRatio: 0.32, color: "rgba(168, 85, 247, 0.14)" }
+    ];
+
+    const stars = Array.from({ length: 240 }, () => ({
+      x: Math.random() * viewW,
+      y: Math.random() * viewH,
+      r: Math.random() * 1.85 + 0.35,
+      speed: Math.random() * 0.95 + 0.15,
+      twinkle: Math.random() * Math.PI * 2,
+      twinkleSpeed: Math.random() * 0.045 + 0.015,
+      sparkle: Math.random() < 0.14,
+      hue: Math.random() < 0.22 ? "#bae6fd" : Math.random() < 0.16 ? "#fef08a" : "#ffffff"
+    }));
+
+    let shootingStars = [];
+    let particles = [];
+    let floatingTexts = [];
+    let bullets = [];
+    let enemyProjectiles = [];
+    let ufos = [];
+    let aliens = [];
+    let boss = null;
+    let empWave = null;
+    let earthRotation = 0;
+    let satelliteOrbitAngle = 0;
+    let shakeTime = 0;
+
+    function spawnParticles(x, y, colors, count = 18, speedScale = 1) {
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = (Math.random() * 4.2 + 1.2) * speedScale;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          life: 1,
+          decay: Math.random() * 0.028 + 0.018,
+          r: Math.random() * 3.4 + 1.3,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+    }
+
+    function addFloatingText(x, y, text, color = "#67e8f9") {
+      floatingTexts.push({ x, y, text, color, life: 1 });
+    }
+
+    function getEarthGeometry() {
+      const radius = Math.max(viewW * 0.72, 420);
+      const visibleHeight = Math.min(118, Math.max(82, viewH * 0.12));
+      const cx = viewW / 2;
+      const cy = viewH + radius - visibleHeight;
+      return { cx, cy, radius, topY: viewH - visibleHeight };
+    }
+
+    function loadSavedProgress() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if (data && typeof data.level === "number" && data.level >= 1 && data.level <= MAX_LEVEL) {
+          return data;
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    function saveProgress() {
+      try {
+        const data = {
+          level: state.level,
+          score: state.score,
+          coins: state.coins,
+          paddleLevel: state.paddleLevel,
+          sideTurretLevel: state.sideTurretLevel,
+          satelliteCount: state.satelliteCount,
+          shields: state.shields,
+          magnetLevel: state.magnetLevel,
+          greedLevel: state.greedLevel,
+          empCount: state.empCount
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      } catch (e) {}
+    }
+
+    const basePadW = getBasePaddleWidth();
+
+    let state = {
+      running: false,
+      paused: false,
+      hasPlayed: false,
+      level: 1,
+      levelProgress: 0,
+      score: 0,
+      coins: 0,
+      hp: 100,
+      combo: 0,
+      paddleW: basePadW,
+      paddleH: 18,
+      paddleX: viewW / 2 - basePadW / 2,
+      paddleLevel: 1,
+      sideTurretLevel: 0,
+      turretCooldown: 0,
+      leftTurretAngle: -Math.PI / 3,
+      rightTurretAngle: (-Math.PI * 2) / 3,
+      satelliteCount: 0,
+      satelliteCooldown: 0,
+      shields: 0,
+      magnetLevel: 0,
+      greedLevel: 1,
+      empCount: 0,
+      meteors: [],
+      spawnTimer: 0,
+      invaderTimer: 0,
+      keys: {}
+    };
+
+    resize();
+
+    const initialSaved = loadSavedProgress();
+    if (initialSaved && initialSaved.level > 1) {
+      state.level = initialSaved.level;
+      state.score = initialSaved.score || 0;
+      state.coins = initialSaved.coins || 0;
+      state.paddleLevel = initialSaved.paddleLevel || 1;
+      state.paddleW = getBasePaddleWidth() + (state.paddleLevel - 1) * 24;
+      state.paddleX = viewW / 2 - state.paddleW / 2;
+      state.sideTurretLevel = initialSaved.sideTurretLevel || 0;
+      state.satelliteCount = initialSaved.satelliteCount || 0;
+      state.shields = initialSaved.shields || 0;
+      state.magnetLevel = initialSaved.magnetLevel || 0;
+      state.greedLevel = initialSaved.greedLevel || 1;
+      state.empCount = initialSaved.empCount || 0;
+      missionTag.textContent = `TIẾN TRÌNH ĐÃ LƯU • CẤP ${state.level}/${MAX_LEVEL}`;
+      overlayDesc.textContent = `Bạn đang ở Cấp ${state.level}/${MAX_LEVEL} với ${state.coins} xu và toàn bộ trang bị đã nâng cấp. Chạm giữ để tiếp tục ngay tại Cấp ${state.level}!`;
+      resetCampaignBtn.style.display = "inline-block";
+    }
+
+    let holdingStart = false;
+    let holdProgress = 0;
+    let isLaunching = false;
+    const HOLD_DURATION_MS = 900;
+    let lastFrameTime = performance.now();
+
+    function setChargeVisual(val) {
+      const clamped = Math.max(0, Math.min(1, val));
+      holdStartBtn.style.setProperty("--charge", clamped.toFixed(3));
+      if (clamped > 0.03 && !isLaunching) {
+        holdBtnLabel.textContent = `ĐANG NẠP NĂNG LƯỢNG... ${Math.round(clamped * 100)}%`;
+      } else if (!isLaunching) {
+        if (state.hasPlayed) {
+          holdBtnLabel.textContent = `GIỮ ĐỂ CHƠI LẠI CẤP ${state.level}`;
+        } else if (state.level > 1) {
+          holdBtnLabel.textContent = `GIỮ ĐỂ TIẾP TỤC CẤP ${state.level}`;
+        } else {
+          holdBtnLabel.textContent = "GIỮ ĐỂ BẮT ĐẦU";
+        }
+      }
+    }
+
+    function beginHold(e) {
+      if (isLaunching || state.running) return;
+      if (e && e.cancelable) e.preventDefault();
+      holdingStart = true;
+      playTone(260, "sine", 0.25, 0.05, 520);
+    }
+
+    function cancelHold() {
+      if (isLaunching) return;
+      holdingStart = false;
+      holdProgress = 0;
+      setChargeVisual(0);
+    }
+
+    holdStartBtn.addEventListener("pointerdown", beginHold);
+    holdStartBtn.addEventListener("touchstart", beginHold, { passive: false });
+    window.addEventListener("pointerup", cancelHold);
+    window.addEventListener("pointercancel", cancelHold);
+    window.addEventListener("touchend", cancelHold);
+    window.addEventListener("touchcancel", cancelHold);
+    holdStartBtn.addEventListener("mouseleave", () => {
+      if (holdingStart && !isLaunching) cancelHold();
+    });
+
+    function triggerScreenBrightStart() {
+      isLaunching = true;
+      holdingStart = false;
+      holdBtnLabel.textContent = "KHỞI ĐỘNG!";
+      setChargeVisual(1);
+      playTone(520, "triangle", 0.4, 0.11, 1040);
+
+      screenFlash.style.transition = "opacity 0.15s ease-in";
+      screenFlash.style.opacity = "1";
+
+      setTimeout(() => {
+        startCurrentLevel();
+        screenFlash.style.transition = "opacity 0.6s ease-out";
+        screenFlash.style.opacity = "0";
+        isLaunching = false;
+        holdProgress = 0;
+        setChargeVisual(0);
+      }, 220);
+    }
+
+    resetCampaignBtn.addEventListener("click", () => {
+      localStorage.removeItem(SAVE_KEY);
+      state.level = 1;
+      state.levelProgress = 0;
+      state.score = 0;
+      state.coins = 0;
+      state.paddleLevel = 1;
+      state.paddleW = getBasePaddleWidth();
+      state.paddleX = viewW / 2 - state.paddleW / 2;
+      state.sideTurretLevel = 0;
+      state.satelliteCount = 0;
+      state.shields = 0;
+      state.magnetLevel = 0;
+      state.greedLevel = 1;
+      state.empCount = 0;
+      state.hasPlayed = false;
+      missionTag.textContent = "CHIẾN DỊCH 30 CẤP ĐỘ • ĐỘ KHÓ TĂNG DẦN";
+      overlayTitle.textContent = "BẢO VỆ TRÁI ĐẤT";
+      overlayDesc.textContent =
+        "Bắt đầu nhẹ nhàng từ Cấp 1 dễ làm quen và tăng dần độ khó qua 30 cấp độ. Nâng cấp tháp pháo hai bên màn hình, vệ tinh quỹ đạo và tiêu diệt Boss Hố Đen ở cấp 10, 20, 30!";
+      resetCampaignBtn.style.display = "none";
+      setChargeVisual(0);
+      updateHUD();
+      showToast("Đã đặt lại chiến dịch về Cấp 1!");
+    });
+
+    function getUpgradeCosts() {
+      return {
+        sideTurret: 50 + state.sideTurretLevel * 45,
+        satellite: 65 + state.satelliteCount * 50,
+        paddle: 30 + (state.paddleLevel - 1) * 20,
+        shield: 45,
+        magnet: 55 + state.magnetLevel * 35,
+        greed: 50 + (state.greedLevel - 1) * 40,
+        heal: 35,
+        emp: 65
+      };
+    }
+
+    function spawnBossForLevel(lvl) {
+      const cfg = BOSS_CONFIGS[lvl];
+      if (!cfg) return;
+      boss = {
+        level: lvl,
+        name: cfg.name,
+        x: viewW / 2,
+        y: Math.max(165, viewH * 0.24),
+        r: viewW < 480 ? 46 : 56,
+        hp: cfg.maxHp,
+        maxHp: cfg.maxHp,
+        vx: 1.9,
+        angle: 0,
+        shotTimer: 0,
+        coreColor: cfg.coreColor,
+        ringInner: cfg.ringInner,
+        ringMid: cfg.ringMid,
+        ringOuter: cfg.ringOuter
+      };
+      if (state.shields === 0) {
+        state.shields = 1;
+      }
+      shakeTime = 18;
+      playTone(140, "sawtooth", 0.6, 0.12, 55);
+      showToast(`⚠️ CẢNH BÁO: ${cfg.name} XUẤT HIỆN! (${cfg.maxHp.toLocaleString("vi-VN")} HP)`);
+    }
+
+    function getNeededProgressForLevel(lvl) {
+      if (lvl === 1) return 6;
+      return 6 + Math.floor((lvl - 1) * 0.65);
+    }
+
+    function advanceLevel() {
+      if (state.level >= MAX_LEVEL) return;
+      state.level += 1;
+      state.levelProgress = 0;
+      state.coins += 15 + state.greedLevel * 3;
+      saveProgress();
+      playTone(580, "triangle", 0.25, 0.08, 920);
+
+      if (BOSS_CONFIGS[state.level]) {
+        spawnBossForLevel(state.level);
+      } else {
+        showToast(`🌟 Đã vượt cấp! Tiến vào Cấp ${state.level}/${MAX_LEVEL}`);
+      }
+      updateHUD();
+    }
+
+    function registerLevelProgress(amount = 1) {
+      if (boss) return;
+      if (state.level >= MAX_LEVEL) return;
+      state.levelProgress += amount;
+      const needed = getNeededProgressForLevel(state.level);
+      if (state.levelProgress >= needed) {
+        advanceLevel();
+      } else {
+        updateHUD();
+      }
+    }
+
+    function updateBossHUD() {
+      if (!boss) {
+        bossHud.classList.remove("active");
+        return;
+      }
+      bossHud.classList.add("active");
+      const cfg = BOSS_CONFIGS[boss.level];
+      bossNameEl.textContent = boss.name;
+      const curHp = Math.max(0, Math.ceil(boss.hp));
+      bossHpTextEl.textContent = `${curHp.toLocaleString("vi-VN")} / ${boss.maxHp.toLocaleString("vi-VN")} HP`;
+      const pct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
+      bossBarFill.style.width = `${pct}%`;
+      if (cfg) {
+        bossBarFill.style.background = cfg.gradCss;
+      }
+    }
+
+    function updateHUD() {
+      levelEl.textContent = `${state.level}/${MAX_LEVEL}`;
+      scoreEl.textContent = state.score;
+      coinsEl.textContent = state.coins;
+      shopCoinsEl.textContent = state.coins;
+
+      const needed = getNeededProgressForLevel(state.level);
+      const progPct = boss ? 100 : Math.min(100, Math.round((state.levelProgress / needed) * 100));
+      levelProgressFill.style.width = `${progPct}%`;
+
+      const hpClamped = Math.max(0, Math.min(100, state.hp));
+      hpEl.textContent = `${hpClamped}%`;
+      hpBarFill.style.width = `${hpClamped}%`;
+      if (hpClamped <= 30) {
+        hpPill.classList.add("low");
+        hpBarFill.style.background = "linear-gradient(90deg, #ef4444, #f97316)";
+      } else {
+        hpPill.classList.remove("low");
+        hpBarFill.style.background = "linear-gradient(90deg, #22c55e, #38bdf8)";
+      }
+
+      shieldEl.textContent = state.shields;
+      empCountEl.textContent = state.empCount;
+      useEmpBtn.disabled = !state.running || state.empCount <= 0;
+
+      if (state.combo >= 2) {
+        comboPill.style.display = "flex";
+        comboEl.textContent = `x${state.combo}`;
+      } else {
+        comboPill.style.display = "none";
+      }
+
+      updateBossHUD();
+
+      const costs = getUpgradeCosts();
+
+      document.getElementById("lvlSideTurret").textContent =
+        state.sideTurretLevel === 0
+          ? "Chưa có"
+          : state.sideTurretLevel >= 4
+          ? "Cấp 4 (Tối đa)"
+          : `Cấp ${state.sideTurretLevel}`;
+      buySideTurretBtn.textContent =
+        state.sideTurretLevel >= 4
+          ? "Đã đạt cấp tối đa"
+          : `${state.sideTurretLevel === 0 ? "Mua 2 tháp pháo" : "Nâng cấp pháo"} — ${costs.sideTurret} Xu`;
+      buySideTurretBtn.disabled = state.sideTurretLevel >= 4 || state.coins < costs.sideTurret;
+
+      document.getElementById("lvlSatellite").textContent = `${state.satelliteCount} / 3`;
+      buySatelliteBtn.textContent =
+        state.satelliteCount >= 3 ? "Đã đủ 3 vệ tinh" : `Phóng 1 vệ tinh — ${costs.satellite} Xu`;
+      buySatelliteBtn.disabled = state.satelliteCount >= 3 || state.coins < costs.satellite;
+
+      document.getElementById("lvlPaddle").textContent =
+        state.paddleLevel >= 6 ? "Tối đa" : `Cấp ${state.paddleLevel}`;
+      buyPaddleBtn.textContent =
+        state.paddleLevel >= 6 ? "Đã đạt tối đa" : `Nâng cấp — ${costs.paddle} Xu`;
+      buyPaddleBtn.disabled = state.paddleLevel >= 6 || state.coins < costs.paddle;
+
+      document.getElementById("lvlShield").textContent = `${state.shields} lớp`;
+      buyShieldBtn.textContent = `Mua 1 lớp — ${costs.shield} Xu`;
+      buyShieldBtn.disabled = state.shields >= 6 || state.coins < costs.shield;
+
+      document.getElementById("lvlMagnet").textContent =
+        state.magnetLevel >= 4 ? "Tối đa" : `Cấp ${state.magnetLevel}`;
+      buyMagnetBtn.textContent =
+        state.magnetLevel >= 4 ? "Đã đạt tối đa" : `Nâng cấp — ${costs.magnet} Xu`;
+      buyMagnetBtn.disabled = state.magnetLevel >= 4 || state.coins < costs.magnet;
+
+      document.getElementById("lvlGreed").textContent =
+        state.greedLevel >= 4 ? "Tối đa" : `Cấp ${state.greedLevel}`;
+      buyGreedBtn.textContent =
+        state.greedLevel >= 4 ? "Đã đạt tối đa" : `Nâng cấp — ${costs.greed} Xu`;
+      buyGreedBtn.disabled = state.greedLevel >= 4 || state.coins < costs.greed;
+
+      buyHealBtn.textContent = hpClamped >= 100 ? "Trái Đất đã đầy HP" : `Sửa chữa — ${costs.heal} Xu`;
+      buyHealBtn.disabled = hpClamped >= 100 || state.coins < costs.heal;
+
+      document.getElementById("lvlEmp").textContent = `Đang có: ${state.empCount}`;
+      buyEmpBtn.textContent = `Mua 1 quả — ${costs.emp} Xu`;
+      buyEmpBtn.disabled = state.empCount >= 3 || state.coins < costs.emp;
+    }
+
+    function startCurrentLevel() {
+      resize();
+      particles = [];
+      floatingTexts = [];
+      bullets = [];
+      enemyProjectiles = [];
+      ufos = [];
+      aliens = [];
+      boss = null;
+      empWave = null;
+
+      state.running = true;
+      state.paused = false;
+      state.hasPlayed = true;
+      state.levelProgress = 0;
+      state.hp = 100;
+      state.combo = 0;
+      state.paddleW = getBasePaddleWidth() + (state.paddleLevel - 1) * 24;
+      state.paddleX = viewW / 2 - state.paddleW / 2;
+      state.meteors = [];
+      const initialInterval = getMeteorSpawnInterval();
+      state.spawnTimer = Math.max(0, initialInterval - 42);
+      state.invaderTimer = 0;
+      state.keys = {};
+
+      if (BOSS_CONFIGS[state.level]) {
+        spawnBossForLevel(state.level);
+      } else {
+        showToast(`🚀 Bắt đầu Cấp ${state.level}/${MAX_LEVEL}!`);
+      }
+
+      saveProgress();
+      updateHUD();
+      shopModal.classList.remove("open");
+      overlay.classList.add("hidden");
+    }
+
+    function victoryGame() {
+      state.running = false;
+      boss = null;
+      shopModal.classList.remove("open");
+      updateBossHUD();
+      holdProgress = 0;
+      setChargeVisual(0);
+      missionTag.textContent = "CHIẾN THẮNG TUYỆT ĐỐI • HOÀN TẤT 30 CẤP ĐỘ";
+      overlayTitle.textContent = "TRÁI ĐẤT ĐƯỢC BẢO VỆ!";
+      overlayDesc.textContent = `Xuất sắc! Bạn đã vượt qua cả 30 cấp độ, hạ gục mọi Boss Hố Đen và đạt ${state.score} điểm với ${state.coins} xu.`;
+      holdHint.textContent = "Chạm giữ nút để tiếp tục bảo vệ Cấp 30 hoặc đặt lại từ Cấp 1";
+      resetCampaignBtn.style.display = "inline-block";
+      overlay.classList.remove("hidden");
+      playTone(660, "triangle", 0.5, 0.1, 1180);
+    }
+
+    function gameOver() {
+      state.running = false;
+      boss = null;
+      updateBossHUD();
+      shopModal.classList.remove("open");
+      saveProgress();
+      holdProgress = 0;
+      setChargeVisual(0);
+      missionTag.textContent = `THẤT BẠI TẠI CẤP ${state.level}/${MAX_LEVEL} • ĐÃ LƯU TIẾN TRÌNH`;
+      overlayTitle.textContent = `CHƠI LẠI CẤP ${state.level}`;
+      overlayDesc.textContent = `Bạn đã vượt qua các cấp trước nên sẽ bắt đầu lại ngay tại Cấp ${state.level}/${MAX_LEVEL} với ${state.coins} xu và toàn bộ trang bị đã mua!`;
+      holdHint.textContent = `Chạm giữ nút cho đến khi sáng bừng để chơi lại Cấp ${state.level}`;
+      resetCampaignBtn.style.display = "inline-block";
+      overlay.classList.remove("hidden");
+      playTone(180, "sawtooth", 0.45, 0.1, 65);
+    }
+
+    function toggleShop(forceState) {
+      if (!state.running) return;
+      const shouldOpen =
+        typeof forceState === "boolean" ? forceState : !shopModal.classList.contains("open");
+      shopModal.classList.toggle("open", shouldOpen);
+      state.paused = shouldOpen;
+      updateHUD();
+    }
+
+    openShopBtn.addEventListener("click", () => toggleShop(true));
+    closeShopBtn.addEventListener("click", () => toggleShop(false));
+
+    buySideTurretBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().sideTurret;
+      if (state.coins >= cost && state.sideTurretLevel < 4) {
+        state.coins -= cost;
+        state.sideTurretLevel += 1;
+        saveProgress();
+        playTone(680, "square", 0.15, 0.06, 980);
+        showToast(`🗼 Tháp pháo 2 bên màn hình đạt Cấp ${state.sideTurretLevel}!`);
+        updateHUD();
+      }
+    });
+
+    buySatelliteBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().satellite;
+      if (state.coins >= cost && state.satelliteCount < 3) {
+        state.coins -= cost;
+        state.satelliteCount += 1;
+        saveProgress();
+        playTone(740, "sine", 0.18, 0.07, 1020);
+        showToast(`🛰️ Đã phóng Vệ tinh chiến đấu số ${state.satelliteCount}!`);
+        updateHUD();
+      }
+    });
+
+    buyPaddleBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().paddle;
+      if (state.coins >= cost && state.paddleLevel < 6) {
+        state.coins -= cost;
+        state.paddleLevel += 1;
+        state.paddleW += 24;
+        saveProgress();
+        playTone(620, "triangle", 0.15, 0.08, 880);
+        showToast(`Đã mở rộng lá chắn lên Cấp ${state.paddleLevel}!`);
+        updateHUD();
+      }
+    });
+
+    buyShieldBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().shield;
+      if (state.coins >= cost && state.shields < 6) {
+        state.coins -= cost;
+        state.shields += 1;
+        saveProgress();
+        playTone(540, "sine", 0.18, 0.08, 820);
+        showToast("Đã kích hoạt thêm 1 lớp Vòm Khiên!");
+        updateHUD();
+      }
+    });
+
+    buyMagnetBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().magnet;
+      if (state.coins >= cost && state.magnetLevel < 4) {
+        state.coins -= cost;
+        state.magnetLevel += 1;
+        saveProgress();
+        playTone(460, "triangle", 0.18, 0.08, 690);
+        showToast(`Lõi từ trường đạt Cấp ${state.magnetLevel}!`);
+        updateHUD();
+      }
+    });
+
+    buyGreedBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().greed;
+      if (state.coins >= cost && state.greedLevel < 4) {
+        state.coins -= cost;
+        state.greedLevel += 1;
+        saveProgress();
+        playTone(600, "sine", 0.18, 0.08, 900);
+        showToast(`🪙 Máy khai thác Xu đạt Cấp ${state.greedLevel}!`);
+        updateHUD();
+      }
+    });
+
+    buyHealBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().heal;
+      if (state.coins >= cost && state.hp < 100) {
+        state.coins -= cost;
+        state.hp = Math.min(100, state.hp + 40);
+        saveProgress();
+        playTone(500, "sine", 0.2, 0.08, 760);
+        showToast("Đã phục hồi +40% sinh quyển Trái Đất!");
+        updateHUD();
+      }
+    });
+
+    buyEmpBtn.addEventListener("click", () => {
+      const cost = getUpgradeCosts().emp;
+      if (state.coins >= cost && state.empCount < 3) {
+        state.coins -= cost;
+        state.empCount += 1;
+        saveProgress();
+        playTone(400, "sawtooth", 0.16, 0.07, 840);
+        showToast("Đã nạp 1 Bom xung kích EMP!");
+        updateHUD();
+      }
+    });
+
+    function triggerEMP() {
+      if (!state.running || state.paused || state.empCount <= 0) return;
+      state.empCount -= 1;
+      const earth = getEarthGeometry();
+      empWave = { x: viewW / 2, y: earth.topY, r: 20, alpha: 1 };
+      playTone(320, "sawtooth", 0.45, 0.12, 95);
+      shakeTime = 14;
+
+      for (const m of state.meteors) {
+        state.score += 15;
+        state.coins += 6;
+        spawnParticles(m.x, m.y, ["#c084fc", "#38bdf8", "#f8fafc"], 14, 1.1);
+      }
+      state.meteors = [];
+
+      for (const u of ufos) {
+        state.score += 30;
+        state.coins += 12;
+        spawnParticles(u.x, u.y, ["#34d399", "#38bdf8", "#ffffff"], 18, 1.2);
+      }
+      ufos = [];
+
+      for (const a of aliens) {
+        state.score += 25;
+        state.coins += 10;
+        spawnParticles(a.x, a.y, ["#a855f7", "#f472b6", "#ffffff"], 16, 1.1);
+      }
+      aliens = [];
+
+      if (boss) {
+        const empDmg = 3400;
+        boss.hp -= empDmg;
+        spawnParticles(boss.x, boss.y, ["#c084fc", "#38bdf8", "#ffffff"], 32, 1.5);
+        addFloatingText(boss.x, boss.y - 20, `-${empDmg} EMP!`, "#e9d5ff");
+      }
+
+      saveProgress();
+      showToast("⚡ XUNG KÍCH EMP QUÉT SẠCH ĐỘI HÌNH ĐỊCH!");
+      updateHUD();
+    }
+
+    useEmpBtn.addEventListener("click", triggerEMP);
+
+    window.addEventListener("keydown", (e) => {
+      const k = e.key.toLowerCase();
+      state.keys[k] = true;
+      if (k === "b") toggleShop();
+      if (e.code === "Space") {
+        if (state.running && !state.paused) {
+          e.preventDefault();
+          triggerEMP();
+        }
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      state.keys[e.key.toLowerCase()] = false;
+    });
+
+    function movePaddleToClientX(clientX) {
+      state.paddleX = Math.max(0, Math.min(viewW - state.paddleW, clientX - state.paddleW / 2));
+    }
+
+    canvas.addEventListener("mousemove", (e) => {
+      movePaddleToClientX(e.clientX);
+    });
+
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.touches.length > 0) {
+          if (state.running && !state.paused) {
+            e.preventDefault();
+          }
+          movePaddleToClientX(e.touches[0].clientX);
+        }
+      },
+      { passive: false }
+    );
+
+    canvas.addEventListener(
+      "touchmove",
+      (e) => {
+        if (e.touches.length > 0) {
+          if (state.running && !state.paused) {
+            e.preventDefault();
+          }
+          movePaddleToClientX(e.touches[0].clientX);
+        }
+      },
+      { passive: false }
+    );
+
+    function createMeteorVertices(r) {
+      const vertices = [];
+      const sides = 10;
+      for (let i = 0; i < sides; i++) {
+        const a = (i / sides) * Math.PI * 2;
+        const dist = r * (0.76 + Math.random() * 0.3);
+        vertices.push({ x: Math.cos(a) * dist, y: Math.sin(a) * dist });
+      }
+      return vertices;
+    }
+
+    function getMeteorSpawnInterval() {
+      const base = Math.max(26, 82 - (state.level - 1) * 1.9);
+      return boss ? Math.max(46, base + 14) : base;
+    }
+
+    function getDifficultyFactor() {
+      return (state.level - 1) / (MAX_LEVEL - 1);
+    }
+
+    function spawnMeteor() {
+      const diff = getDifficultyFactor();
+      const roll = Math.random();
+      let type = "normal";
+      let r = Math.random() * 9 + 14;
+      let hp = 1;
+
+      const baseSpeed = 1.25 + diff * 2.55;
+      let speed = Math.random() * 0.55 + baseSpeed;
+
+      if (boss) speed *= 0.72;
+
+      const goldChance = 0.24 - diff * 0.08;
+      const fireChance = state.level >= 2 ? 0.05 + diff * 0.18 : 0;
+      const giantChance = state.level >= 4 ? 0.04 + diff * 0.14 : 0;
+
+      if (roll < goldChance) {
+        type = "gold";
+        r = 15;
+        speed *= 1.04;
+      } else if (roll < goldChance + fireChance) {
+        type = "fire";
+        r = 13.5;
+        speed *= 1.28;
+      } else if (roll < goldChance + fireChance + giantChance) {
+        type = "giant";
+        r = viewW < 480 ? 24 : 28;
+        hp = 3;
+        speed *= 0.65;
+      }
+
+      const sidePad = Math.max(24, r + 24);
+      const usableW = Math.max(60, viewW - sidePad * 2);
+
+      state.meteors.push({
+        x: sidePad + Math.random() * usableW,
+        y: -r - 12,
+        r,
+        type,
+        hp,
+        maxHp: hp,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.05,
+        vertices: createMeteorVertices(r),
+        speed
+      });
+    }
+
+    function spawnInvader() {
+      const diff = getDifficultyFactor();
+      const ufoChance = state.level <= 2 ? 0.15 : 0.25 + diff * 0.45;
+      if (Math.random() < ufoChance) {
+        const fromLeft = Math.random() < 0.5;
+        ufos.push({
+          x: fromLeft ? -40 : viewW + 40,
+          y: 120 + Math.random() * 100,
+          vx: (fromLeft ? 1 : -1) * (1.25 + diff * 1.85),
+          r: 21,
+          hp: 2 + Math.floor(state.level / 9),
+          fireTimer: 85 + Math.floor(Math.random() * 45),
+          phase: Math.random() * Math.PI * 2
+        });
+      } else {
+        aliens.push({
+          x: Math.random() * Math.max(60, viewW - 80) + 40,
+          y: -30,
+          vy: 0.95 + diff * 1.45,
+          sway: Math.random() * Math.PI * 2,
+          r: 17,
+          hp: 2 + Math.floor(state.level / 10)
+        });
+      }
+    }
+
+    function rewardCatch(m, x, y) {
+      state.combo += 1;
+      const mult = Math.min(4, 1 + Math.floor(state.combo / 5));
+      const baseScore = m.type === "gold" ? 25 : m.type === "giant" ? 35 : m.type === "fire" ? 20 : 12;
+      const baseCoins = m.type === "gold" ? 18 : m.type === "giant" ? 14 : m.type === "fire" ? 8 : 6;
+      const coinBonus = (state.greedLevel - 1) * 3;
+
+      const gainedScore = baseScore * mult;
+      const gainedCoins = baseCoins + coinBonus + (mult - 1) * 2;
+
+      state.score += gainedScore;
+      state.coins += gainedCoins;
+
+      const colors =
+        m.type === "gold"
+          ? ["#fde047", "#f59e0b", "#ffffff"]
+          : m.type === "giant"
+          ? ["#c084fc", "#38bdf8", "#e0f2fe"]
+          : ["#38bdf8", "#67e8f9", "#ffffff"];
+
+      spawnParticles(x, y, colors, 16);
+      addFloatingText(x, y - 10, `+${gainedCoins} Xu`, m.type === "gold" ? "#fde047" : "#7dd3fc");
+      playTone(480 + Math.min(350, state.combo * 18), "sine", 0.1, 0.055, 740);
+      registerLevelProgress(1);
+      updateHUD();
+    }
+
+    function damageEarth(dmg, x, y, label = null) {
+      state.combo = 0;
+      const finalDmg = boss ? Math.max(6, Math.round(dmg * 0.55)) : dmg;
+      state.hp -= finalDmg;
+      shakeTime = 12;
+      spawnParticles(x, y, ["#fb7185", "#f97316", "#fde047"], 22, 1.15);
+      addFloatingText(x, y - 12, label || `-${finalDmg}% HP`, "#fb7185");
+      playTone(150, "sawtooth", 0.24, 0.09, 60);
+      updateHUD();
+
+      if (state.hp <= 0) {
+        gameOver();
+        return true;
+      }
+      return false;
+    }
+
+    function findNearestTarget(fromX, fromY) {
+      if (boss) return { x: boss.x, y: boss.y };
+      let best = null;
+      let bestDist = Infinity;
+
+      for (const m of state.meteors) {
+        const d = Math.hypot(m.x - fromX, m.y - fromY);
+        if (d < bestDist) {
+          bestDist = d;
+          best = { x: m.x, y: m.y };
+        }
+      }
+      for (const u of ufos) {
+        const d = Math.hypot(u.x - fromX, u.y - fromY);
+        if (d < bestDist) {
+          bestDist = d;
+          best = { x: u.x, y: u.y };
+        }
+      }
+      for (const a of aliens) {
+        const d = Math.hypot(a.x - fromX, a.y - fromY);
+        if (d < bestDist) {
+          bestDist = d;
+          best = { x: a.x, y: a.y };
+        }
+      }
+      return best;
+    }
+
+    function getSatellitePositions() {
+      if (state.satelliteCount <= 0) return [];
+      const earth = getEarthGeometry();
+      const orbitY = earth.topY - 94;
+      const orbitRadiusX = viewW * (viewW < 520 ? 0.32 : 0.36);
+      const list = [];
+      for (let i = 0; i < state.satelliteCount; i++) {
+        const phase = satelliteOrbitAngle + (i * Math.PI * 2) / state.satelliteCount;
+        const sx = viewW / 2 + Math.cos(phase) * orbitRadiusX;
+        const sy = orbitY + Math.sin(phase * 2) * 14;
+        list.push({ x: sx, y: sy, idx: i });
+      }
+      return list;
+    }
+
+    function update(dt) {
+      earthRotation += 0.0018;
+      satelliteOrbitAngle += 0.018;
+      if (shakeTime > 0) shakeTime -= 1;
+
+      if (holdingStart && !state.running && !isLaunching) {
+        holdProgress += dt / HOLD_DURATION_MS;
+        setChargeVisual(holdProgress);
+        if (holdProgress >= 1) {
+          triggerScreenBrightStart();
+        }
+      }
+
+      for (const s of stars) {
+        s.y += s.speed * (state.running && !state.paused ? 1 : 0.4);
+        s.twinkle += s.twinkleSpeed;
+        if (s.y > viewH) {
+          s.y = 0;
+          s.x = Math.random() * viewW;
+        }
+      }
+
+      if (Math.random() < 0.012 && shootingStars.length < 2) {
+        shootingStars.push({
+          x: Math.random() * viewW * 0.85,
+          y: Math.random() * viewH * 0.35,
+          vx: Math.random() * 7 + 8,
+          vy: Math.random() * 3 + 3,
+          life: 1
+        });
+      }
+
+      for (let i = shootingStars.length - 1; i >= 0; i--) {
+        const ss = shootingStars[i];
+        ss.x += ss.vx;
+        ss.y += ss.vy;
+        ss.life -= 0.025;
+        if (ss.life <= 0) shootingStars.splice(i, 1);
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const ft = floatingTexts[i];
+        ft.y -= 1.1;
+        ft.life -= 0.022;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+      }
+
+      if (empWave) {
+        empWave.r += 24;
+        empWave.alpha -= 0.028;
+        if (empWave.alpha <= 0) empWave = null;
+      }
+
+      if (!state.running || state.paused) return;
+
+      const moveSpeed = 9.8;
+      if (state.keys["arrowleft"] || state.keys["a"]) state.paddleX -= moveSpeed;
+      if (state.keys["arrowright"] || state.keys["d"]) state.paddleX += moveSpeed;
+      state.paddleX = Math.max(0, Math.min(viewW - state.paddleW, state.paddleX));
+
+      const earth = getEarthGeometry();
+      const paddleY = earth.topY - 46;
+
+      const effectiveTurretLevel = state.sideTurretLevel > 0 ? state.sideTurretLevel : boss ? 1 : 0;
+      const sideX = viewW < 480 ? 18 : 24;
+      const leftBase = { x: sideX, y: earth.topY - 26 };
+      const rightBase = { x: viewW - sideX, y: earth.topY - 26 };
+
+      if (effectiveTurretLevel > 0) {
+        const targetL = findNearestTarget(leftBase.x, leftBase.y);
+        const targetR = findNearestTarget(rightBase.x, rightBase.y);
+
+        if (targetL) state.leftTurretAngle = Math.atan2(targetL.y - leftBase.y, targetL.x - leftBase.x);
+        if (targetR) state.rightTurretAngle = Math.atan2(targetR.y - rightBase.y, targetR.x - rightBase.x);
+
+        state.turretCooldown -= 1;
+        if (state.turretCooldown <= 0 && (targetL || targetR)) {
+          state.turretCooldown = Math.max(11, 26 - effectiveTurretLevel * 3);
+          const dmg = 85 + effectiveTurretLevel * 65;
+          const speed = 15;
+
+          if (targetL) {
+            bullets.push({
+              x: leftBase.x + Math.cos(state.leftTurretAngle) * 20,
+              y: leftBase.y + Math.sin(state.leftTurretAngle) * 20,
+              vx: Math.cos(state.leftTurretAngle) * speed,
+              vy: Math.sin(state.leftTurretAngle) * speed,
+              dmg,
+              color: "#38bdf8"
+            });
+          }
+          if (targetR) {
+            bullets.push({
+              x: rightBase.x + Math.cos(state.rightTurretAngle) * 20,
+              y: rightBase.y + Math.sin(state.rightTurretAngle) * 20,
+              vx: Math.cos(state.rightTurretAngle) * speed,
+              vy: Math.sin(state.rightTurretAngle) * speed,
+              dmg,
+              color: "#f472b6"
+            });
+          }
+          playTone(760, "square", 0.04, 0.018, 420);
+        }
+      }
+
+      const sats = getSatellitePositions();
+      if (sats.length > 0) {
+        state.satelliteCooldown -= 1;
+        if (state.satelliteCooldown <= 0) {
+          state.satelliteCooldown = Math.max(18, 36 - sats.length * 4);
+          for (const sat of sats) {
+            const tgt = findNearestTarget(sat.x, sat.y);
+            if (tgt) {
+              const ang = Math.atan2(tgt.y - sat.y, tgt.x - sat.x);
+              bullets.push({
+                x: sat.x,
+                y: sat.y - 6,
+                vx: Math.cos(ang) * 14,
+                vy: Math.sin(ang) * 14,
+                dmg: 75,
+                color: "#34d399"
+              });
+            }
+          }
+        }
+      }
+
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.y < -30 || b.y > viewH + 30 || b.x < -30 || b.x > viewW + 30) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        let hit = false;
+
+        if (boss) {
+          const distBoss = Math.hypot(b.x - boss.x, b.y - boss.y);
+          if (distBoss <= boss.r + 6) {
+            hit = true;
+            boss.hp -= b.dmg;
+            spawnParticles(b.x, b.y, [boss.ringInner, boss.ringMid, "#ffffff"], 5, 0.7);
+            updateBossHUD();
+
+            if (boss.hp <= 0) {
+              const defeatedLevel = boss.level;
+              spawnParticles(boss.x, boss.y, [boss.ringInner, boss.ringMid, "#fde047", "#ffffff"], 55, 1.8);
+              shakeTime = 24;
+              state.score += defeatedLevel * 100;
+              state.coins += defeatedLevel * 6;
+              showToast(`🎉 ĐÃ TIÊU DIỆT BOSS HỐ ĐEN CẤP ${defeatedLevel}!`);
+              playTone(520, "triangle", 0.45, 0.1, 1040);
+              boss = null;
+              updateBossHUD();
+              updateHUD();
+
+              if (defeatedLevel >= MAX_LEVEL) {
+                saveProgress();
+                victoryGame();
+                return;
+              } else {
+                state.level += 1;
+                state.levelProgress = 0;
+                saveProgress();
+                showToast(`🚀 Tiến vào Cấp ${state.level}/${MAX_LEVEL}!`);
+                updateHUD();
+              }
+            }
+          }
+        }
+
+        if (!hit) {
+          for (let j = state.meteors.length - 1; j >= 0; j--) {
+            const m = state.meteors[j];
+            if (Math.hypot(b.x - m.x, b.y - m.y) <= m.r + 7) {
+              hit = true;
+              m.hp -= 1;
+              spawnParticles(b.x, b.y, ["#38bdf8", "#ffffff"], 6, 0.7);
+              if (m.hp <= 0) {
+                rewardCatch(m, m.x, m.y);
+                state.meteors.splice(j, 1);
+              }
+              break;
+            }
+          }
+        }
+
+        if (!hit) {
+          for (let j = ufos.length - 1; j >= 0; j--) {
+            const u = ufos[j];
+            if (Math.hypot(b.x - u.x, b.y - u.y) <= u.r + 8) {
+              hit = true;
+              u.hp -= 1;
+              spawnParticles(b.x, b.y, ["#34d399", "#ffffff"], 7, 0.8);
+              if (u.hp <= 0) {
+                const coinEarn = 16 + (state.greedLevel - 1) * 4;
+                state.score += 45;
+                state.coins += coinEarn;
+                spawnParticles(u.x, u.y, ["#34d399", "#38bdf8", "#fde047"], 22, 1.2);
+                addFloatingText(u.x, u.y - 12, `UFO NỔ! +${coinEarn} Xu`, "#34d399");
+                playTone(560, "sawtooth", 0.18, 0.06, 220);
+                ufos.splice(j, 1);
+                registerLevelProgress(2);
+                updateHUD();
+              }
+              break;
+            }
+          }
+        }
+
+        if (!hit) {
+          for (let j = aliens.length - 1; j >= 0; j--) {
+            const a = aliens[j];
+            if (Math.hypot(b.x - a.x, b.y - a.y) <= a.r + 7) {
+              hit = true;
+              a.hp -= 1;
+              spawnParticles(b.x, b.y, ["#c084fc", "#ffffff"], 7, 0.8);
+              if (a.hp <= 0) {
+                const coinEarn = 12 + (state.greedLevel - 1) * 3;
+                state.score += 35;
+                state.coins += coinEarn;
+                spawnParticles(a.x, a.y, ["#c084fc", "#f472b6", "#fde047"], 20, 1.1);
+                addFloatingText(a.x, a.y - 12, `+${coinEarn} Xu`, "#e9d5ff");
+                playTone(620, "triangle", 0.14, 0.05, 880);
+                aliens.splice(j, 1);
+                registerLevelProgress(1);
+                updateHUD();
+              }
+              break;
+            }
+          }
+        }
+
+        if (hit) bullets.splice(i, 1);
+      }
+
+      if (boss) {
+        boss.angle += 0.045;
+        boss.x += boss.vx;
+        const margin = boss.r + (viewW < 480 ? 32 : 65);
+        if (boss.x < margin) {
+          boss.x = margin;
+          boss.vx = Math.abs(boss.vx);
+        } else if (boss.x > viewW - margin) {
+          boss.x = viewW - margin;
+          boss.vx = -Math.abs(boss.vx);
+        }
+
+        boss.shotTimer += 1;
+        if (boss.shotTimer >= 90) {
+          boss.shotTimer = 0;
+          const spread = [-1.2, 1.2];
+          for (const svx of spread) {
+            enemyProjectiles.push({
+              x: boss.x,
+              y: boss.y + boss.r * 0.6,
+              vx: svx,
+              vy: 2.9,
+              r: 9,
+              color: boss.ringInner
+            });
+          }
+        }
+      }
+
+      state.spawnTimer += 1;
+      const spawnInterval = getMeteorSpawnInterval();
+      if (state.spawnTimer >= spawnInterval) {
+        state.spawnTimer = 0;
+        spawnMeteor();
+      }
+
+      state.invaderTimer += 1;
+      const diff = getDifficultyFactor();
+      const invaderInterval = Math.max(90, 290 - diff * 185);
+      const maxInvaders = state.level === 1 ? 2 : 3 + Math.floor(diff * 4);
+      if (state.invaderTimer >= invaderInterval) {
+        state.invaderTimer = 0;
+        if (ufos.length + aliens.length < maxInvaders) {
+          spawnInvader();
+        }
+      }
+
+      for (let i = ufos.length - 1; i >= 0; i--) {
+        const u = ufos[i];
+        u.x += u.vx;
+        u.phase += 0.06;
+        u.y += Math.sin(u.phase) * 0.7;
+
+        u.fireTimer -= 1;
+        if (u.fireTimer <= 0) {
+          u.fireTimer = Math.max(65, 115 - Math.floor(diff * 45));
+          enemyProjectiles.push({
+            x: u.x,
+            y: u.y + 14,
+            vx: 0,
+            vy: 2.7 + diff * 1.4,
+            r: 7,
+            color: "#34d399"
+          });
+        }
+
+        if (u.x < -90 || u.x > viewW + 90) {
+          ufos.splice(i, 1);
+        }
+      }
+
+      for (let i = aliens.length - 1; i >= 0; i--) {
+        const a = aliens[i];
+        a.y += a.vy;
+        a.sway += 0.05;
+        a.x += Math.sin(a.sway) * 1.3;
+        a.x = Math.max(24, Math.min(viewW - 24, a.x));
+
+        const hitPaddle =
+          a.y + a.r >= paddleY &&
+          a.y - a.r <= paddleY + state.paddleH &&
+          a.x + a.r >= state.paddleX &&
+          a.x - a.r <= state.paddleX + state.paddleW;
+
+        if (hitPaddle) {
+          state.combo += 1;
+          const coinEarn = 10 + (state.greedLevel - 1) * 3;
+          state.score += 25;
+          state.coins += coinEarn;
+          spawnParticles(a.x, paddleY, ["#c084fc", "#38bdf8", "#ffffff"], 16);
+          addFloatingText(a.x, paddleY - 12, `BẮT GỌN! +${coinEarn} Xu`, "#e9d5ff");
+          playTone(540, "sine", 0.12, 0.06, 820);
+          aliens.splice(i, 1);
+          registerLevelProgress(1);
+          updateHUD();
+          continue;
+        }
+
+        const distEarth = Math.hypot(a.x - earth.cx, a.y - earth.cy);
+        if (distEarth - a.r <= earth.radius) {
+          aliens.splice(i, 1);
+          if (state.shields > 0) {
+            state.shields -= 1;
+            spawnParticles(a.x, a.y, ["#38bdf8", "#ffffff"], 18);
+            addFloatingText(a.x, a.y - 12, "KHIÊN CHẶN!", "#38bdf8");
+            updateHUD();
+          } else if (damageEarth(12 + Math.round(diff * 6), a.x, a.y)) {
+            return;
+          }
+        }
+      }
+
+      for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+        const ep = enemyProjectiles[i];
+        ep.x += ep.vx;
+        ep.y += ep.vy;
+
+        const hitPaddle =
+          ep.y + ep.r >= paddleY &&
+          ep.y - ep.r <= paddleY + state.paddleH &&
+          ep.x + ep.r >= state.paddleX &&
+          ep.x - ep.r <= state.paddleX + state.paddleW;
+
+        if (hitPaddle) {
+          state.score += 10;
+          spawnParticles(ep.x, paddleY, [ep.color, "#ffffff"], 10, 0.8);
+          enemyProjectiles.splice(i, 1);
+          updateHUD();
+          continue;
+        }
+
+        const distEarth = Math.hypot(ep.x - earth.cx, ep.y - earth.cy);
+        if (distEarth - ep.r <= earth.radius) {
+          enemyProjectiles.splice(i, 1);
+          if (state.shields > 0) {
+            state.shields -= 1;
+            spawnParticles(ep.x, ep.y, ["#38bdf8", "#ffffff"], 16);
+            addFloatingText(ep.x, ep.y - 10, "KHIÊN CHẶN!", "#38bdf8");
+            updateHUD();
+          } else if (damageEarth(9 + Math.round(diff * 5), ep.x, ep.y)) {
+            return;
+          }
+        } else if (ep.y > viewH + 30) {
+          enemyProjectiles.splice(i, 1);
+        }
+      }
+
+      const paddleCenter = state.paddleX + state.paddleW / 2;
+
+      for (let i = state.meteors.length - 1; i >= 0; i--) {
+        const m = state.meteors[i];
+        m.y += m.speed;
+        m.rot += m.rotSpeed;
+
+        if (state.magnetLevel > 0 && m.y > viewH * 0.32 && m.y < paddleY) {
+          const dx = paddleCenter - m.x;
+          if (Math.abs(dx) < 180 + state.magnetLevel * 45) {
+            m.x += Math.sign(dx) * (0.9 + state.magnetLevel * 0.55);
+          }
+        }
+
+        let interceptedBySat = false;
+        for (const sat of sats) {
+          if (Math.hypot(m.x - sat.x, m.y - sat.y) <= m.r + 16) {
+            interceptedBySat = true;
+            rewardCatch(m, sat.x, sat.y);
+            state.meteors.splice(i, 1);
+            break;
+          }
+        }
+        if (interceptedBySat) continue;
+
+        const hitPaddle =
+          m.y + m.r >= paddleY &&
+          m.y - m.r <= paddleY + state.paddleH &&
+          m.x + m.r >= state.paddleX &&
+          m.x - m.r <= state.paddleX + state.paddleW;
+
+        if (hitPaddle) {
+          m.hp -= 1;
+          if (m.hp > 0) {
+            m.y = paddleY - m.r - 4;
+            m.speed = -Math.abs(m.speed) * 1.15;
+            setTimeout(() => {
+              if (m) m.speed = Math.abs(m.speed) * 0.92;
+            }, 260);
+            spawnParticles(m.x, paddleY, ["#c084fc", "#ffffff"], 12);
+            playTone(340, "triangle", 0.1, 0.07, 460);
+          } else {
+            rewardCatch(m, m.x, paddleY);
+            state.meteors.splice(i, 1);
+          }
+          continue;
+        }
+
+        const distToEarthCenter = Math.hypot(m.x - earth.cx, m.y - earth.cy);
+        const shieldRadius = earth.radius + 14;
+
+        if (state.shields > 0 && distToEarthCenter - m.r <= shieldRadius) {
+          state.shields -= 1;
+          state.combo = 0;
+          spawnParticles(m.x, m.y, ["#38bdf8", "#bae6fd", "#ffffff"], 22);
+          addFloatingText(m.x, m.y - 12, "KHIÊN CHẶN!", "#38bdf8");
+          playTone(300, "sine", 0.22, 0.09, 160);
+          state.meteors.splice(i, 1);
+          updateHUD();
+          continue;
+        }
+
+        if (distToEarthCenter - m.r <= earth.radius) {
+          state.meteors.splice(i, 1);
+          const dmg =
+            m.type === "giant"
+              ? 20 + Math.round(diff * 8)
+              : m.type === "fire"
+              ? 15 + Math.round(diff * 7)
+              : 10 + Math.round(diff * 6);
+          if (damageEarth(dmg, m.x, m.y)) {
+            return;
+          }
+        }
+      }
+    }
+
+    function drawEarthSphere() {
+      const { cx, cy, radius } = getEarthGeometry();
+
+      ctx.save();
+
+      const outerHalo = ctx.createRadialGradient(cx, cy, radius * 0.96, cx, cy, radius + 58);
+      outerHalo.addColorStop(0, "rgba(56, 189, 248, 0.6)");
+      outerHalo.addColorStop(0.45, "rgba(14, 165, 233, 0.24)");
+      outerHalo.addColorStop(1, "rgba(14, 165, 233, 0)");
+      ctx.fillStyle = outerHalo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius + 58, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.clip();
+
+      const oceanGrad = ctx.createRadialGradient(
+        cx - radius * 0.18,
+        cy - radius * 0.88,
+        radius * 0.08,
+        cx,
+        cy,
+        radius
+      );
+      oceanGrad.addColorStop(0, "#7dd3fc");
+      oceanGrad.addColorStop(0.2, "#0284c7");
+      oceanGrad.addColorStop(0.55, "#1d4ed8");
+      oceanGrad.addColorStop(1, "#091332");
+      ctx.fillStyle = oceanGrad;
+      ctx.fillRect(0, 0, viewW, viewH);
+
+      const continents = [
+        { angleOffset: -0.35, dist: 0.91, rx: 125, ry: 34, rot: -0.18 },
+        { angleOffset: -0.08, dist: 0.94, rx: 95, ry: 26, rot: 0.12 },
+        { angleOffset: 0.22, dist: 0.90, rx: 140, ry: 38, rot: -0.08 },
+        { angleOffset: 0.52, dist: 0.93, rx: 110, ry: 30, rot: 0.2 }
+      ];
+
+      for (const c of continents) {
+        const a = -Math.PI / 2 + ((c.angleOffset + earthRotation) % 1.2) - 0.35;
+        const lx = cx + Math.cos(a) * radius * c.dist;
+        const ly = cy + Math.sin(a) * radius * c.dist;
+
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(a + Math.PI / 2 + c.rot);
+
+        const landGrad = ctx.createLinearGradient(-c.rx, -c.ry, c.rx, c.ry);
+        landGrad.addColorStop(0, "rgba(74, 222, 128, 0.56)");
+        landGrad.addColorStop(0.6, "rgba(22, 163, 74, 0.48)");
+        landGrad.addColorStop(1, "rgba(234, 179, 8, 0.34)");
+        ctx.fillStyle = landGrad;
+
+        ctx.beginPath();
+        ctx.ellipse(0, 0, c.rx, c.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(254, 240, 138, 0.65)";
+        ctx.beginPath();
+        ctx.arc(-c.rx * 0.25, 2, 2.2, 0, Math.PI * 2);
+        ctx.arc(c.rx * 0.18, -3, 1.8, 0, Math.PI * 2);
+        ctx.arc(c.rx * 0.35, 4, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 16, radius * 0.96, Math.PI * 1.25, Math.PI * 1.75);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(224, 242, 254, 0.85)";
+      ctx.lineWidth = 4.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius - 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+
+      if (state.shields > 0) {
+        ctx.save();
+        const shieldR = radius + 14;
+        ctx.strokeStyle = "#38bdf8";
+        ctx.shadowColor = "#38bdf8";
+        ctx.shadowBlur = 18;
+        ctx.lineWidth = 3 + state.shields * 0.7;
+        ctx.beginPath();
+        ctx.arc(cx, cy, shieldR, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(186, 230, 253, 0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([12, 10]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, shieldR + 5, Math.PI * 1.18, Math.PI * 1.82);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function drawSideTurrets() {
+      const showTurrets = state.sideTurretLevel > 0 || Boolean(boss);
+      if (!showTurrets) return;
+
+      const earth = getEarthGeometry();
+      const sideX = viewW < 480 ? 18 : 24;
+      const bases = [
+        { x: sideX, y: earth.topY - 26, angle: state.leftTurretAngle, color: "#38bdf8" },
+        { x: viewW - sideX, y: earth.topY - 26, angle: state.rightTurretAngle, color: "#f472b6" }
+      ];
+
+      for (const b of bases) {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+
+        ctx.fillStyle = "#0f172a";
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(0, 4, 16, Math.PI, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.rotate(b.angle);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.beginPath();
+        ctx.roundRect(0, -3.5, 22, 7, 3);
+        ctx.fill();
+
+        ctx.fillStyle = b.color;
+        ctx.fillRect(16, -4.5, 6, 9);
+
+        ctx.restore();
+      }
+    }
+
+    function drawSatellites() {
+      const sats = getSatellitePositions();
+      for (const sat of sats) {
+        ctx.save();
+        ctx.translate(sat.x, sat.y);
+
+        ctx.fillStyle = "#0284c7";
+        ctx.strokeStyle = "#7dd3fc";
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(-22, -3.5, 14, 7);
+        ctx.strokeRect(-22, -3.5, 14, 7);
+        ctx.fillRect(8, -3.5, 14, 7);
+        ctx.strokeRect(8, -3.5, 14, 7);
+
+        ctx.fillStyle = "#e2e8f0";
+        ctx.beginPath();
+        ctx.arc(0, 0, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#34d399";
+        ctx.shadowColor = "#34d399";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(0, -7.5, 2.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    function drawBossBlackHole() {
+      if (!boss) return;
+      ctx.save();
+      ctx.translate(boss.x, boss.y);
+
+      const halo = ctx.createRadialGradient(0, 0, boss.r * 0.5, 0, 0, boss.r * 2.25);
+      halo.addColorStop(0, boss.coreColor);
+      halo.addColorStop(0.45, boss.ringOuter);
+      halo.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, boss.r * 2.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.rotate(boss.angle);
+      ctx.strokeStyle = boss.ringInner;
+      ctx.shadowColor = boss.ringMid;
+      ctx.shadowBlur = 24;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, boss.r * 1.48, boss.r * 0.56, 0.25, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = boss.ringMid;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, boss.r * 1.25, boss.r * 0.42, -0.3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      const coreGrad = ctx.createRadialGradient(0, 0, boss.r * 0.35, 0, 0, boss.r);
+      coreGrad.addColorStop(0, "#000000");
+      coreGrad.addColorStop(0.75, boss.coreColor);
+      coreGrad.addColorStop(1, boss.ringInner);
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, boss.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawUFOs() {
+      for (const u of ufos) {
+        ctx.save();
+        ctx.translate(u.x, u.y);
+
+        ctx.fillStyle = "rgba(125, 211, 252, 0.7)";
+        ctx.beginPath();
+        ctx.arc(0, -4, 11, Math.PI, 0);
+        ctx.fill();
+
+        const bodyGrad = ctx.createLinearGradient(-u.r, 0, u.r, 0);
+        bodyGrad.addColorStop(0, "#475569");
+        bodyGrad.addColorStop(0.5, "#e2e8f0");
+        bodyGrad.addColorStop(1, "#334155");
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 2, u.r, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        for (let k = -1; k <= 1; k++) {
+          ctx.fillStyle = k === 0 ? "#34d399" : "#fbbf24";
+          ctx.beginPath();
+          ctx.arc(k * 10.5, 3, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function drawAliens() {
+      for (const a of aliens) {
+        ctx.save();
+        ctx.translate(a.x, a.y);
+
+        ctx.fillStyle = "#a855f7";
+        ctx.shadowColor = "#c084fc";
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, a.r * 0.85, a.r, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#090d16";
+        ctx.beginPath();
+        ctx.ellipse(-6, -2, 4.5, 6.5, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(6, -2, 4.5, 6.5, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#4ade80";
+        ctx.beginPath();
+        ctx.arc(-5.5, -3.5, 1.5, 0, Math.PI * 2);
+        ctx.arc(5.5, -3.5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    function draw() {
+      ctx.save();
+      if (shakeTime > 0) {
+        const dx = (Math.random() - 0.5) * 8;
+        const dy = (Math.random() - 0.5) * 8;
+        ctx.translate(dx, dy);
+      }
+
+      const spaceGrad = ctx.createLinearGradient(0, 0, 0, viewH);
+      spaceGrad.addColorStop(0, "#02040c");
+      spaceGrad.addColorStop(0.55, "#060e24");
+      spaceGrad.addColorStop(1, "#0a1938");
+      ctx.fillStyle = spaceGrad;
+      ctx.fillRect(0, 0, viewW, viewH);
+
+      ctx.save();
+      ctx.translate(viewW * 0.5, viewH * 0.38);
+      ctx.rotate(-0.28);
+      const milkyGrad = ctx.createLinearGradient(0, -90, 0, 90);
+      milkyGrad.addColorStop(0, "rgba(56, 189, 248, 0)");
+      milkyGrad.addColorStop(0.5, "rgba(129, 140, 248, 0.08)");
+      milkyGrad.addColorStop(1, "rgba(56, 189, 248, 0)");
+      ctx.fillStyle = milkyGrad;
+      ctx.fillRect(-viewW, -90, viewW * 2, 180);
+      ctx.restore();
+
+      for (const n of nebulae) {
+        const nx = viewW * n.xRatio;
+        const ny = viewH * n.yRatio;
+        const nr = Math.max(viewW, viewH) * n.rRatio;
+        const g = ctx.createRadialGradient(nx, ny, 10, nx, ny, nr);
+        g.addColorStop(0, n.color);
+        g.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(nx, ny, nr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const s of stars) {
+        const alpha = 0.4 + 0.6 * Math.sin(s.twinkle);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = s.hue;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (s.sparkle && alpha > 0.82) {
+          ctx.strokeStyle = s.hue;
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(s.x - s.r * 2.6, s.y);
+          ctx.lineTo(s.x + s.r * 2.6, s.y);
+          ctx.moveTo(s.x, s.y - s.r * 2.6);
+          ctx.lineTo(s.x, s.y + s.r * 2.6);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      for (const ss of shootingStars) {
+        ctx.save();
+        ctx.globalAlpha = ss.life;
+        const grad = ctx.createLinearGradient(ss.x, ss.y, ss.x - ss.vx * 8, ss.y - ss.vy * 8);
+        grad.addColorStop(0, "#ffffff");
+        grad.addColorStop(1, "rgba(56, 189, 248, 0)");
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(ss.x, ss.y);
+        ctx.lineTo(ss.x - ss.vx * 8, ss.y - ss.vy * 8);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawBossBlackHole();
+      drawUFOs();
+      drawAliens();
+      drawEarthSphere();
+      drawSatellites();
+      drawSideTurrets();
+
+      if (empWave) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(192, 132, 252, ${empWave.alpha})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(empWave.x, empWave.y, empWave.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      for (const b of bullets) {
+        ctx.save();
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (const ep of enemyProjectiles) {
+        ctx.save();
+        ctx.fillStyle = ep.color;
+        ctx.shadowColor = ep.color;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(ep.x, ep.y, ep.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const earth = getEarthGeometry();
+      const paddleY = earth.topY - 46;
+
+      ctx.save();
+      if (state.magnetLevel > 0 && state.running) {
+        ctx.strokeStyle = "rgba(168, 85, 247, 0.25)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(
+          state.paddleX + state.paddleW / 2,
+          paddleY + state.paddleH / 2,
+          80 + state.magnetLevel * 22,
+          Math.PI,
+          Math.PI * 2
+        );
+        ctx.stroke();
+      }
+
+      const padGrad = ctx.createLinearGradient(
+        state.paddleX,
+        paddleY,
+        state.paddleX + state.paddleW,
+        paddleY
+      );
+      padGrad.addColorStop(0, "#0284c7");
+      padGrad.addColorStop(0.5, "#a5f3fc");
+      padGrad.addColorStop(1, "#6366f1");
+      ctx.fillStyle = padGrad;
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.roundRect(state.paddleX, paddleY, state.paddleW, state.paddleH, 9);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.roundRect(
+        state.paddleX + state.paddleW * 0.22,
+        paddleY + 5,
+        state.paddleW * 0.56,
+        state.paddleH - 10,
+        4
+      );
+      ctx.fill();
+      ctx.restore();
+
+      for (const m of state.meteors) {
+        const trailLen = m.type === "fire" ? m.r * 3.4 : m.r * 2.3;
+        const trailGrad = ctx.createLinearGradient(m.x, m.y - trailLen, m.x, m.y);
+        trailGrad.addColorStop(0, "rgba(0, 0, 0, 0)");
+        if (m.type === "gold") {
+          trailGrad.addColorStop(1, "rgba(250, 204, 21, 0.45)");
+        } else if (m.type === "giant") {
+          trailGrad.addColorStop(1, "rgba(168, 85, 247, 0.42)");
+        } else if (m.type === "fire") {
+          trailGrad.addColorStop(1, "rgba(244, 63, 94, 0.52)");
+        } else {
+          trailGrad.addColorStop(1, "rgba(249, 115, 22, 0.38)");
+        }
+
+        ctx.fillStyle = trailGrad;
+        ctx.beginPath();
+        ctx.moveTo(m.x - m.r * 0.75, m.y);
+        ctx.lineTo(m.x, m.y - trailLen);
+        ctx.lineTo(m.x + m.r * 0.75, m.y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.rotate(m.rot);
+
+        const bodyGrad = ctx.createRadialGradient(-m.r * 0.25, -m.r * 0.25, 2, 0, 0, m.r);
+        if (m.type === "gold") {
+          bodyGrad.addColorStop(0, "#fef9c3");
+          bodyGrad.addColorStop(0.55, "#eab308");
+          bodyGrad.addColorStop(1, "#713f12");
+        } else if (m.type === "giant") {
+          bodyGrad.addColorStop(0, "#e9d5ff");
+          bodyGrad.addColorStop(0.55, "#7e22ce");
+          bodyGrad.addColorStop(1, "#2e1065");
+        } else if (m.type === "fire") {
+          bodyGrad.addColorStop(0, "#fecdd3");
+          bodyGrad.addColorStop(0.5, "#e11d48");
+          bodyGrad.addColorStop(1, "#4c0519");
+        } else {
+          bodyGrad.addColorStop(0, "#fed7aa");
+          bodyGrad.addColorStop(0.55, "#ea580c");
+          bodyGrad.addColorStop(1, "#431407");
+        }
+
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        m.vertices.forEach((pt, idx) => {
+          if (idx === 0) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.26)";
+        ctx.beginPath();
+        ctx.arc(-m.r * 0.22, -m.r * 0.15, m.r * 0.22, 0, Math.PI * 2);
+        ctx.arc(m.r * 0.25, m.r * 0.2, m.r * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        if (m.type === "giant" && m.hp > 1) {
+          ctx.fillStyle = "#f3e8ff";
+          ctx.font = "bold 12px Segoe UI, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${m.hp}`, m.x, m.y + 4);
+        }
+      }
+
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      for (const ft of floatingTexts) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, ft.life);
+        ctx.fillStyle = ft.color;
+        ctx.font = "bold 14px Segoe UI, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function loop(now) {
+      const dt = Math.min(100, now - lastFrameTime);
+      lastFrameTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    setChargeVisual(0);
+    updateHUD();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
+
